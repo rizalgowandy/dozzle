@@ -1,63 +1,37 @@
 <template>
-  <div class="columns is-1 is-variable">
-    <div class="column is-narrow" v-if="showTimestamp">
-      <log-date :date="logEntry.date"></log-date>
-    </div>
-    <div class="column">
-      <ul class="fields" :class="{ expanded }" @click="expanded = !expanded">
-        <li v-for="(value, name) in validValues(logEntry.message)">
-          <span class="has-text-grey">{{ name }}=</span>
-          <span class="has-text-weight-bold" v-html="markSearch(value)"></span>
-        </li>
-      </ul>
-      <field-list :fields="logEntry.unfilteredMessage" :expanded="expanded" :visible-keys="visibleKeys"></field-list>
-    </div>
-  </div>
+  <LogItem :logEntry @click="showDrawer(LogDetails, { entry: logEntry })" class="clickable">
+    <ul class="space-x-4">
+      <li v-for="(value, name) in validValues" :key="name" class="inline-flex">
+        <span class="text-light">{{ name }}=</span><span class="font-bold" v-if="value === null">&lt;null&gt;</span>
+        <template v-else-if="Array.isArray(value)">
+          <span class="font-bold" v-html="JSON.stringify(value)"> </span>
+        </template>
+        <span class="font-bold" v-html="stripAnsi(value.toString())" v-else></span>
+      </li>
+      <li class="text-light" v-if="Object.keys(validValues).length === 0">all values are hidden</li>
+    </ul>
+  </LogItem>
 </template>
 <script lang="ts" setup>
+import stripAnsi from "strip-ansi";
 import { type ComplexLogEntry } from "@/models/LogEntry";
-
-const { markSearch } = useSearchFilter();
+import LogDetails from "./LogDetails.vue";
 
 const { logEntry } = defineProps<{
   logEntry: ComplexLogEntry;
-  visibleKeys: string[][];
+  showContainerName?: boolean;
 }>();
 
-let expanded = $ref(false);
+const validValues = computed(() => {
+  return Object.fromEntries(Object.entries(logEntry.message).filter(([_, value]) => value !== undefined));
+});
 
-function validValues(obj: Record<string, any>) {
-  return Object.fromEntries(Object.entries(obj).filter(([_, value]) => value !== undefined));
-}
+const showDrawer = useDrawer();
 </script>
 
-<style lang="scss" scoped>
-.fields {
-  display: inline-block;
-  list-style: none;
-
-  &:hover {
-    cursor: pointer;
-    &::after {
-      content: "expand json";
-      color: var(--secondary-color);
-      display: inline-block;
-      margin-left: 0.5em;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    }
-  }
-
-  &.expanded:hover {
-    &::after {
-      content: "collapse json";
-    }
-  }
-
-  li {
-    display: inline-block;
-    & + li {
-      margin-left: 1em;
-    }
-  }
+<style scoped>
+@import "@/main.css" reference;
+.text-light {
+  @apply text-base-content/70;
 }
 </style>
